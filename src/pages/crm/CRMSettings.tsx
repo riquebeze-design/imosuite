@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DatabaseZap } from "lucide-react";
 import { HeroMediaManager } from "@/components/crm/HeroMediaManager";
 import { AgentCreateModal } from "@/components/crm/AgentCreateModal";
+import { BrandIdentityModal } from "@/components/crm/BrandIdentityModal";
 
 export default function CRMSettingsPage() {
   useSeo({ title: "Definições — CRM AtlasCasa" });
@@ -41,6 +42,18 @@ export default function CRMSettingsPage() {
   return (
     <CRMShell title="Definições">
       <div className="grid gap-4">
+        <Card className="rounded-[2rem] border bg-card p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="text-sm font-semibold tracking-tight">Identidade visual</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ajuste cores, fontes, raio e dados da empresa (nome, contactos e logotipo).
+              </p>
+            </div>
+            <BrandIdentityModal />
+          </div>
+        </Card>
+
         <HeroMediaManager />
 
         <Card className="rounded-[2rem] border bg-card p-4">

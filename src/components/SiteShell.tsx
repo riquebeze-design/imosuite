@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { Heart, LayoutGrid, Scale, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIChatWidget } from "@/components/AIChatWidget";
+import { getBrandSettings, subscribeBrandSettings } from "@/lib/brandSettings";
 
 function TopNavLink({
   to,
@@ -33,6 +35,12 @@ function TopNavLink({
 }
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
+  const [brand, setBrand] = useState(() => getBrandSettings());
+
+  useEffect(() => {
+    return subscribeBrandSettings(() => setBrand(getBrandSettings()));
+  }, []);
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -95,8 +103,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="space-y-2">
             <div className="text-sm font-semibold">Contacto</div>
-            <div className="text-sm text-muted-foreground">geral@atlascasa.pt</div>
-            <div className="text-sm text-muted-foreground">+351 21 000 0000</div>
+            <div className="text-sm text-muted-foreground">{brand.company.email}</div>
+            <div className="text-sm text-muted-foreground">{brand.company.phone}</div>
+            <div className="text-sm text-muted-foreground">{brand.company.address}</div>
             <div className="text-xs text-muted-foreground">
               Demonstração • RGPD: não use dados pessoais reais.
             </div>

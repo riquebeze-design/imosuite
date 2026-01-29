@@ -18,6 +18,7 @@ import CRMLeadDetailPage from "@/pages/crm/CRMLeadDetail";
 import CRMAutomationsPage from "@/pages/crm/CRMAutomations";
 import CRMEmailPage from "@/pages/crm/CRMEmail";
 import CRMSettingsPage from "@/pages/crm/CRMSettings";
+import { BrandStyleProvider } from "@/components/BrandStyleProvider";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AppStoreProvider>
+        <BrandStyleProvider />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
