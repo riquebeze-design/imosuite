@@ -605,6 +605,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       return data?.id ? String(data.id) : null;
     }
 
+    async function runLeadAutomationEdge(leadId: string) {
+      if (!supabase) return;
+      try {
+        const { error } = await supabase.functions.invoke("lead-automation", {
+          body: { leadId },
+        });
+        if (error) throw error;
+      } catch (e) {
+        baseDispatch({
+          type: "hydrate",
+          state: {
+            backend: {
+              lastError:
+                e instanceof Error ? e.message : `lead-automation: ${String(e)}`,
+            },
+          },
+        });
+      }
+    }
+
     // Intercepta criação de lead para garantir sync + automações consistentes
     if (action.type === "lead_create_request") {
       const leadId = uuid();
@@ -644,6 +664,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           lead = leadToWrite;
 
           await createLeadInSupabase(leadToWrite);
+
+          // Executar automações no backend (Edge Function) + refresh de leads
+          await runLeadAutomationEdge(leadId);
+
+          // (opcional) recarregar leads para refletir logs/atribuição
+          const freshLeads = await loadLeadsFromSupabase().catch(() => null);
+          if (freshLeads) {
+            baseDispatch({ type: "hydrate", state: { leads: freshLeads } });
+          }
+
           for (const r of runs) {
             await insertAutomationRunToSupabase({
               id: r.id,

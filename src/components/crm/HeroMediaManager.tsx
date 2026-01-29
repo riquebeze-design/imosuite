@@ -19,8 +19,8 @@ import {
   type HeroSettings,
 } from "@/lib/siteSettings";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabaseClient";
-import { upsertSiteSettingsToSupabase } from "@/integrations/siteSettingsRepo";
 import { ImagePlus, Trash2, Upload, Video } from "lucide-react";
+import { upsertSiteSettingsToSupabase } from "@/integrations/siteSettingsRepo";
 
 const BUCKET = "site-media";
 
@@ -47,6 +47,7 @@ export function HeroMediaManager() {
   const { toast } = useToast();
   const [draft, setDraft] = useState<HeroSettings>(() => getHeroSettings());
   const [imageUrl, setImageUrl] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const canUpload = isSupabaseConfigured();
 
@@ -58,21 +59,23 @@ export function HeroMediaManager() {
   }, [canUpload]);
 
   async function save() {
-    setHeroSettings(draft);
-
-    if (isSupabaseConfigured()) {
-      try {
+    setSaving(true);
+    try {
+      setHeroSettings(draft);
+      if (isSupabaseConfigured()) {
         await upsertSiteSettingsToSupabase({ hero: draft });
-      } catch (e) {
-        toast({
-          title: "Guardado localmente, mas falhou no Supabase",
-          description: e instanceof Error ? e.message : String(e),
-          variant: "destructive",
-        });
       }
+      toast({ title: "Hero actualizado", description: "Alterações aplicadas ao site." });
+    } catch (e) {
+      toast({
+        title: "Falha ao guardar",
+        description:
+          e instanceof Error ? e.message : "Verifique tabela site_settings e policies.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    toast({ title: "Hero actualizado", description: "Alterações aplicadas ao site." });
   }
 
   async function onAddImages(files: FileList | null) {
@@ -146,8 +149,8 @@ export function HeroMediaManager() {
           <Badge className="rounded-full bg-secondary text-muted-foreground">
             modo: {draft.mode}
           </Badge>
-          <Button className="rounded-2xl" onClick={save}>
-            Guardar
+          <Button className="rounded-2xl" onClick={save} disabled={saving}>
+            {saving ? "A guardar…" : "Guardar"}
           </Button>
         </div>
       </div>
@@ -251,7 +254,10 @@ export function HeroMediaManager() {
 
             <div className="mt-4 grid grid-cols-3 gap-2">
               {draft.images.slice(0, 9).map((src) => (
-                <div key={src} className="relative overflow-hidden rounded-2xl border bg-background">
+                <div
+                  key={src}
+                  className="relative overflow-hidden rounded-2xl border bg-background"
+                >
                   <img src={src} alt="" className="h-20 w-full object-cover" />
                   <button
                     className="absolute right-1 top-1 rounded-full bg-background/80 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
@@ -325,8 +331,8 @@ export function HeroMediaManager() {
           </div>
 
           <div className="mt-4 rounded-2xl border bg-background/60 p-3 text-xs text-muted-foreground">
-            Dica: o bucket <span className="font-medium">{BUCKET}</span> deve ser público para o
-            site conseguir carregar os media.
+            Dica: crie o bucket <span className="font-medium">{BUCKET}</span> como público para
+            o site conseguir carregar os media.
           </div>
         </div>
       </div>
