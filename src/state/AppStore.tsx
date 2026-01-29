@@ -371,19 +371,33 @@ function reducer(state: AppState, action: Action): AppState {
   const next = (() => {
     switch (action.type) {
       case "hydrate": {
-        const mergedBackend = {
+        // Não permitir que valores undefined do payload apaguem o estado atual.
+        const merged: AppState = { ...state };
+
+        if (action.state.catalog !== undefined) merged.catalog = action.state.catalog;
+        if (action.state.agents !== undefined) merged.agents = action.state.agents;
+        if (action.state.leads !== undefined) merged.leads = action.state.leads;
+        if (action.state.automationRules !== undefined)
+          merged.automationRules = action.state.automationRules;
+        if (action.state.automationRuns !== undefined)
+          merged.automationRuns = action.state.automationRuns;
+        if (action.state.emailCampaigns !== undefined)
+          merged.emailCampaigns = action.state.emailCampaigns;
+        if (action.state.session !== undefined) merged.session = action.state.session;
+        if (action.state.favorites !== undefined)
+          merged.favorites = action.state.favorites;
+        if (action.state.compare !== undefined) merged.compare = action.state.compare;
+        if (action.state.events !== undefined) merged.events = action.state.events;
+
+        merged.backend = {
           ...state.backend,
           ...(action.state.backend ?? {}),
           mode: supabase ? "supabase" : state.backend.mode,
-          status: (action.state.backend?.status ?? "ready") as BackendStatus,
+          status: (action.state.backend?.status ?? state.backend.status) as BackendStatus,
           lastError: action.state.backend?.lastError ?? undefined,
         };
 
-        return {
-          ...state,
-          ...action.state,
-          backend: mergedBackend,
-        } as AppState;
+        return merged;
       }
       case "favorite_toggle": {
         const favorites = state.favorites.includes(action.propertyId)
