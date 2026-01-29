@@ -5,6 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import PropertiesPage from "./pages/Properties";
+import PropertyDetailsPage from "./pages/PropertyDetails";
+import FavoritesPage from "./pages/Favorites";
+import ComparePage from "./pages/Compare";
+import { AppStoreProvider } from "@/state/AppStore";
 
 const queryClient = new QueryClient();
 
@@ -13,13 +18,19 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppStoreProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/imoveis" element={<PropertiesPage />} />
+            <Route path="/imovel/:slug" element={<PropertyDetailsPage />} />
+            <Route path="/favoritos" element={<FavoritesPage />} />
+            <Route path="/comparar" element={<ComparePage />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AppStoreProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
