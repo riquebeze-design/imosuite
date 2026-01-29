@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { seedMockDataToSupabase } from "@/integrations/supabaseRepo";
 import { useToast } from "@/hooks/use-toast";
 import { DatabaseZap } from "lucide-react";
+import { HeroMediaManager } from "@/components/crm/HeroMediaManager";
 
 export default function CRMSettingsPage() {
   useSeo({ title: "Definições — CRM AtlasCasa" });
@@ -39,6 +40,8 @@ export default function CRMSettingsPage() {
   return (
     <CRMShell title="Definições">
       <div className="grid gap-4">
+        <HeroMediaManager />
+
         <Card className="rounded-[2rem] border bg-card p-4">
           <div className="text-sm font-semibold tracking-tight">Backend</div>
           <p className="mt-1 text-sm text-muted-foreground">
