@@ -99,6 +99,8 @@ export function BrandIdentityModal() {
     }));
   }
 
+  const logoSize = Math.max(24, Math.min(96, draft.company.logoSizePx || 36));
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -218,12 +220,15 @@ export function BrandIdentityModal() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-3">
-                  <div className="h-14 w-14 overflow-hidden rounded-3xl border bg-background grid place-items-center">
+                  <div
+                    className="overflow-hidden rounded-3xl border bg-background grid place-items-center"
+                    style={{ width: logoSize + 20, height: logoSize + 20 }}
+                  >
                     {draft.company.logoUrl ? (
                       <img
                         src={draft.company.logoUrl}
                         alt="Logo"
-                        className="h-full w-full object-contain p-2"
+                        className="h-full w-full object-contain p-3"
                       />
                     ) : (
                       <div className="h-6 w-6 rounded-lg bg-primary" />
@@ -236,6 +241,30 @@ export function BrandIdentityModal() {
                     <div className="text-sm text-muted-foreground truncate">
                       {draft.company.tagline}
                     </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2">
+                  <Label>Tamanho da área do logotipo</Label>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={[logoSize]}
+                      min={24}
+                      max={96}
+                      step={1}
+                      onValueChange={(v) =>
+                        setDraft((d) => ({
+                          ...d,
+                          company: { ...d.company, logoSizePx: v[0] },
+                        }))
+                      }
+                    />
+                    <Badge className="rounded-full bg-secondary text-muted-foreground">
+                      {logoSize}px
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Aplica-se ao header e ao footer.
                   </div>
                 </div>
 
@@ -320,12 +349,15 @@ export function BrandIdentityModal() {
                 <div className="rounded-3xl border bg-background p-4">
                   <div className="text-sm font-semibold tracking-tight">Pré-visualização</div>
                   <div className="mt-2 flex items-center gap-3">
-                    <div className="h-11 w-11 rounded-3xl border bg-background grid place-items-center overflow-hidden">
+                    <div
+                      className="rounded-3xl border bg-background grid place-items-center overflow-hidden"
+                      style={{ width: logoSize, height: logoSize }}
+                    >
                       {draft.company.logoUrl ? (
                         <img
                           src={draft.company.logoUrl}
                           alt="Logo"
-                          className="h-full w-full object-contain p-2"
+                          className="h-full w-full object-contain p-1.5"
                         />
                       ) : (
                         <div className="h-4 w-4 rounded-md bg-primary" />
@@ -547,7 +579,11 @@ export function BrandIdentityModal() {
         </Tabs>
 
         <div className="mt-4 flex items-center justify-end gap-2">
-          <Button variant="secondary" className="rounded-2xl" onClick={() => setOpen(false)}>
+          <Button
+            variant="secondary"
+            className="rounded-2xl"
+            onClick={() => setOpen(false)}
+          >
             Cancelar
           </Button>
           <Button className="rounded-2xl" onClick={save}>
