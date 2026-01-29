@@ -241,7 +241,6 @@ export async function insertLeadActivityInSupabase(opts: {
 
 export async function upsertAutomationRulesToSupabase(rules: AutomationRule[]) {
   const sb = assertSupabase();
-  // Upsert por id
   const { error } = await sb.from("automations").upsert(
     rules.map((r) => ({
       id: r.id,
@@ -297,8 +296,7 @@ export async function upsertEmailCampaignToSupabase(c: EmailCampaign) {
 export async function seedMockDataToSupabase() {
   const sb = assertSupabase();
 
-  // Agents
-  await sb.from("agents").upsert(
+  const { error: aerr } = await sb.from("agents").upsert(
     MOCK_AGENTS.map((a) => ({
       name: a.name,
       role: a.role,
@@ -308,9 +306,9 @@ export async function seedMockDataToSupabase() {
     })),
     { onConflict: "email" },
   );
+  if (aerr) throw aerr;
 
-  // Properties (deixar o DB gerar uuid id)
-  await sb.from("properties").upsert(
+  const { error: perr } = await sb.from("properties").upsert(
     MOCK_PROPERTIES.map((p) => ({
       title: p.title,
       slug: p.slug,
@@ -335,4 +333,5 @@ export async function seedMockDataToSupabase() {
     })),
     { onConflict: "slug" },
   );
+  if (perr) throw perr;
 }
