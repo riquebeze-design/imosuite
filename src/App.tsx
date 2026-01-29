@@ -11,6 +11,14 @@ import FavoritesPage from "./pages/Favorites";
 import ComparePage from "./pages/Compare";
 import { AppStoreProvider } from "@/state/AppStore";
 
+import CRMIndex from "@/pages/crm/CRMIndex";
+import CRMPipelinePage from "@/pages/crm/CRMPipeline";
+import CRMLeadsPage from "@/pages/crm/CRMLeads";
+import CRMLeadDetailPage from "@/pages/crm/CRMLeadDetail";
+import CRMAutomationsPage from "@/pages/crm/CRMAutomations";
+import CRMEmailPage from "@/pages/crm/CRMEmail";
+import CRMSettingsPage from "@/pages/crm/CRMSettings";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -26,6 +34,16 @@ const App = () => (
             <Route path="/imovel/:slug" element={<PropertyDetailsPage />} />
             <Route path="/favoritos" element={<FavoritesPage />} />
             <Route path="/comparar" element={<ComparePage />} />
+
+            {/* CRM (área interna) */}
+            <Route path="/crm" element={<CRMIndex />} />
+            <Route path="/crm/pipeline" element={<CRMPipelinePage />} />
+            <Route path="/crm/leads" element={<CRMLeadsPage />} />
+            <Route path="/crm/leads/:leadId" element={<CRMLeadDetailPage />} />
+            <Route path="/crm/automacoes" element={<CRMAutomationsPage />} />
+            <Route path="/crm/email" element={<CRMEmailPage />} />
+            <Route path="/crm/definicoes" element={<CRMSettingsPage />} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

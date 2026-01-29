@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useMemo, useReducer } from "react";
 import type {
+  Agent,
   AutomationRule,
   AutomationRun,
+  EmailCampaign,
   Lead,
   LeadStage,
   LeadTemperature,
@@ -19,10 +21,37 @@ const LS_KEYS = {
   leads: "atlascasa:leads",
   automationRules: "atlascasa:automationRules",
   automationRuns: "atlascasa:automationRuns",
+  session: "atlascasa:session",
+  emailCampaigns: "atlascasa:emailCampaigns",
 } as const;
 
 function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+}
+
+function activity(
+  type: Lead["activities"][number]["type"],
+  title: string,
+  detail?: string,
+): Lead["activities"][number] {
+  return {
+    id: uid("act"),
+    type,
+    at: new Date().toISOString(),
+    title,
+    detail,
+  };
+}
+
+function applyTemplate(
+  tmpl: string,
+  vars: Record<string, string | number | undefined | null>,
+) {
+  return tmpl.replace(/\{\{(.*?)\}\}/g, (_, key) => {
+    const k = String(key).trim();
+    const v = vars[k];
+    return v === undefined || v === null ? "" : String(v);
+  });
 }
 
 function leadTemperatureFromLead(lead: Lead, property?: Property): LeadTemperature {
@@ -42,6 +71,34 @@ function leadTemperatureFromLead(lead: Lead, property?: Property): LeadTemperatu
   return "frio";
 }
 
+function pickAgentForLead(
+  lead: { preferredMunicipality?: string; propertyId?: string },
+  catalog: Property[],
+) {
+  const property = lead.propertyId
+    ? catalog.find((p) => p.id === lead.propertyId)
+    : undefined;
+  const municipality = lead.preferredMunicipality ?? property?.municipality;
+
+  const candidates = MOCK_AGENTS.filter((a) => a.role !== "admin");
+  const byMunicipality = municipality
+    ? candidates.filter((a) => a.municipalities.includes(municipality))
+    : [];
+
+  const pool = byMunicipality.length ? byMunicipality : candidates;
+
+  const rrBase = storage.get<number>("atlascasa:rr", 0);
+  const idx = pool.length ? rrBase % pool.length : 0;
+  const assigned = pool[idx]?.id;
+  storage.set("atlascasa:rr", rrBase + 1);
+
+  return assigned;
+}
+
+export type AppSession = {
+  agentId: string;
+};
+
 export type AppState = {
   catalog: Property[];
   favorites: string[];
@@ -50,6 +107,8 @@ export type AppState = {
   leads: Lead[];
   automationRules: AutomationRule[];
   automationRuns: AutomationRun[];
+  emailCampaigns: EmailCampaign[];
+  session: AppSession | null;
 };
 
 type Action =
@@ -57,11 +116,27 @@ type Action =
   | { type: "compare_toggle"; propertyId: string }
   | { type: "compare_clear" }
   | { type: "event_add"; event: PropertyEvent }
-  | { type: "lead_create"; lead: Omit<Lead, "id" | "createdAt" | "stage" | "temperature" | "activities"> }
+  | {
+      type: "lead_create";
+      lead: Omit<
+        Lead,
+        "id" | "createdAt" | "stage" | "temperature" | "activities"
+      >;
+    }
   | { type: "lead_set_stage"; leadId: string; stage: LeadStage }
-  | { type: "lead_add_activity"; leadId: string; title: string; detail?: string; activityType: Lead["activities"][number]["type"] }
+  | {
+      type: "lead_add_activity";
+      leadId: string;
+      title: string;
+      detail?: string;
+      activityType: Lead["activities"][number]["type"];
+    }
   | { type: "automation_rules_set"; rules: AutomationRule[] }
-  | { type: "automation_run_add"; run: AutomationRun };
+  | { type: "automation_run_add"; run: AutomationRun }
+  | { type: "session_login"; agentId: string }
+  | { type: "session_logout" }
+  | { type: "email_campaign_add"; campaign: EmailCampaign }
+  | { type: "email_campaign_update"; campaign: EmailCampaign };
 
 const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
   {
@@ -87,6 +162,24 @@ const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
   },
 ];
 
+const DEFAULT_CAMPAIGNS: EmailCampaign[] = [
+  {
+    id: "camp_welcome",
+    createdAt: new Date().toISOString(),
+    name: "Boas-vindas (demo)",
+    subject: "AtlasCasa — Obrigado pelo seu interesse",
+    fromName: "AtlasCasa",
+    fromEmail: "geral@atlascasa.pt",
+    html: `<div style="font-family:ui-sans-serif,system-ui;line-height:1.6;color:#111827">
+  <h2 style="margin:0 0 8px">Obrigado pelo seu interesse</h2>
+  <p style="margin:0 0 12px">Podemos agendar uma visita esta semana? Responda com o melhor horário.</p>
+  <p style="margin:0">Cumprimentos,<br/>Equipa AtlasCasa</p>
+</div>`,
+    segment: { districts: ["Lisboa"] },
+    stats: { sent: 120, opens: 68, clicks: 19 },
+  },
+];
+
 function initialState(): AppState {
   return {
     catalog: MOCK_PROPERTIES,
@@ -99,6 +192,11 @@ function initialState(): AppState {
       DEFAULT_AUTOMATION_RULES,
     ),
     automationRuns: storage.get<AutomationRun[]>(LS_KEYS.automationRuns, []),
+    emailCampaigns: storage.get<EmailCampaign[]>(
+      LS_KEYS.emailCampaigns,
+      DEFAULT_CAMPAIGNS,
+    ),
+    session: storage.get<AppSession | null>(LS_KEYS.session, null),
   };
 }
 
@@ -109,6 +207,8 @@ function persist(state: AppState) {
   storage.set(LS_KEYS.leads, state.leads);
   storage.set(LS_KEYS.automationRules, state.automationRules);
   storage.set(LS_KEYS.automationRuns, state.automationRuns);
+  storage.set(LS_KEYS.session, state.session);
+  storage.set(LS_KEYS.emailCampaigns, state.emailCampaigns);
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -139,17 +239,12 @@ function reducer(state: AppState, action: Action): AppState {
           ? state.catalog.find((p) => p.id === action.lead.propertyId)
           : undefined;
 
-        // atribuição inicial (round-robin por concelho se possível)
-        const rrBase = storage.get<number>("atlascasa:rr", 0);
-        const agents = [...MOCK_AGENTS].filter((a) => a.role !== "admin");
-        const idx = agents.length ? rrBase % agents.length : 0;
-        const assignedAgentId = agents[idx]?.id;
-        storage.set("atlascasa:rr", rrBase + 1);
+        const assignedAgentId =
+          action.lead.assignedAgentId ?? pickAgentForLead(action.lead, state.catalog);
 
         const createdAt = new Date().toISOString();
         const temp = leadTemperatureFromLead(
           {
-            // dummy minimal
             id: leadId,
             createdAt,
             stage: "Novo",
@@ -181,11 +276,98 @@ function reducer(state: AppState, action: Action): AppState {
           ...action.lead,
         };
 
-        return { ...state, leads: [lead, ...state.leads] };
+        // Executa automações (demo)
+        const agent = MOCK_AGENTS.find((a) => a.id === assignedAgentId);
+        const vars = {
+          nome: lead.name,
+          agente: agent?.name ?? "Equipa AtlasCasa",
+        };
+
+        const enabledRules = state.automationRules.filter(
+          (r) => r.enabled && r.trigger === "lead_created",
+        );
+
+        let nextLead = lead;
+        const runs: AutomationRun[] = [];
+
+        for (const rule of enabledRules) {
+          const summaries: string[] = [];
+          for (const act of rule.actions) {
+            if (act.type === "assign_round_robin") {
+              summaries.push("atribuição");
+            }
+            if (act.type === "send_whatsapp") {
+              const text = applyTemplate(act.template, vars);
+              nextLead = {
+                ...nextLead,
+                activities: [
+                  activity("whatsapp", "WhatsApp (automação)", text),
+                  ...nextLead.activities,
+                ],
+              };
+              summaries.push("WhatsApp");
+            }
+            if (act.type === "send_email") {
+              const subject = applyTemplate(act.subject, vars);
+              const body = applyTemplate(act.body, vars);
+              nextLead = {
+                ...nextLead,
+                activities: [
+                  activity("email", `E-mail (automação): ${subject}`, body),
+                  ...nextLead.activities,
+                ],
+              };
+              summaries.push("e-mail");
+            }
+            if (act.type === "ai_qualify_lead") {
+              const newTemp = leadTemperatureFromLead(nextLead, property);
+              nextLead = {
+                ...nextLead,
+                temperature: newTemp,
+                activities: [
+                  activity(
+                    "automation",
+                    "Qualificação (IA demo)",
+                    `Temperatura definida como " ${newTemp} ".`,
+                  ),
+                  ...nextLead.activities,
+                ],
+              };
+              summaries.push("qualificação");
+            }
+          }
+
+          runs.push({
+            id: uid("run"),
+            ruleId: rule.id,
+            leadId: leadId,
+            at: new Date().toISOString(),
+            summary: `${rule.name} — ${summaries.join(", ")}`,
+          });
+        }
+
+        return {
+          ...state,
+          leads: [nextLead, ...state.leads],
+          automationRuns: [...runs, ...state.automationRuns].slice(0, 250),
+        };
       }
       case "lead_set_stage": {
         const leads = state.leads.map((l) =>
-          l.id === action.leadId ? { ...l, stage: action.stage } : l,
+          l.id === action.leadId
+            ? {
+                ...l,
+                stage: action.stage,
+                activities: [
+                  activity(
+                    "automation",
+                    "Estado do pipeline actualizado",
+                    `Novo estado: ${action.stage}`,
+                  ),
+                  ...l.activities,
+                ],
+              }
+            : l,
         );
         return { ...state, leads };
       }
@@ -216,6 +398,19 @@ function reducer(state: AppState, action: Action): AppState {
           ...state,
           automationRuns: [action.run, ...state.automationRuns].slice(0, 250),
         };
+      case "session_login":
+        return { ...state, session: { agentId: action.agentId } };
+      case "session_logout":
+        return { ...state, session: null };
+      case "email_campaign_add":
+        return { ...state, emailCampaigns: [action.campaign, ...state.emailCampaigns] };
+      case "email_campaign_update":
+        return {
+          ...state,
+          emailCampaigns: state.emailCampaigns.map((c) =>
+            c.id === action.campaign.id ? action.campaign : c,
+          ),
+        };
       default:
         return state;
     }
@@ -229,6 +424,8 @@ type AppStore = {
   state: AppState;
   dispatch: React.Dispatch<Action>;
   getPropertyById: (id: string) => Property | undefined;
+  getAgentById: (id: string) => Agent | undefined;
+  currentAgent: Agent | null;
 };
 
 const Ctx = createContext<AppStore | null>(null);
@@ -237,10 +434,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
 
   const store = useMemo<AppStore>(() => {
+    const currentAgent = state.session
+      ? MOCK_AGENTS.find((a) => a.id === state.session?.agentId) ?? null
+      : null;
+
     return {
       state,
       dispatch,
       getPropertyById: (id) => state.catalog.find((p) => p.id === id),
+      getAgentById: (id) => MOCK_AGENTS.find((a) => a.id === id),
+      currentAgent,
     };
   }, [state]);
 
