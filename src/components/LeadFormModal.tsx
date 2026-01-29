@@ -59,7 +59,7 @@ export function LeadFormModal({
       : undefined;
 
     dispatch({
-      type: "lead_create",
+      type: "lead_create_request",
       lead: {
         name: values.name,
         email: values.email,
@@ -71,7 +71,7 @@ export function LeadFormModal({
         preferredMunicipality: property?.municipality,
         preferredTypology: property?.typology,
       },
-    });
+    } as any);
 
     if (property) {
       dispatch({
@@ -87,7 +87,7 @@ export function LeadFormModal({
     toast({
       title: "Pedido enviado",
       description:
-        "Recebemos o seu contacto. Um consultor irá responder em breve (demo).",
+        "Recebemos o seu contacto. Um consultor irá responder em breve.",
     });
 
     form.reset();
