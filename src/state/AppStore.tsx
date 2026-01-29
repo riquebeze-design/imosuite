@@ -485,6 +485,21 @@ type AppStore = {
 
 const Ctx = createContext<AppStore | null>(null);
 
+// Fallback de segurança para evitar crash caso algum subtree seja montado fora do Provider
+const FALLBACK_STORE: AppStore = {
+  state: initialState(),
+  dispatch: (() => {
+    /* noop */
+  }) as unknown as React.Dispatch<Action>,
+  getPropertyById: (id) => initialState().catalog.find((p) => p.id === id),
+  getAgentById: (id) => initialState().agents.find((a) => a.id === id),
+  currentAgent: null,
+  backendInfo: {
+    mode: supabase ? "supabase" : "local",
+    status: "idle",
+  },
+};
+
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, baseDispatch] = useReducer(reducer, undefined, initialState);
   const stateRef = useRef(state);
@@ -652,6 +667,5 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
 export function useAppStore() {
   const v = useContext(Ctx);
-  if (!v) throw new Error("useAppStore must be used within AppStoreProvider");
-  return v;
+  return v ?? FALLBACK_STORE;
 }

@@ -10,7 +10,6 @@ import { Card } from "@/components/ui/card";
 import { PropertyDetailsTabs } from "@/components/PropertyDetailsTabs";
 import { LeadFormModal } from "@/components/LeadFormModal";
 import { WhatsAppCTAButton } from "@/components/WhatsAppCTAButton";
-import { MOCK_AGENTS } from "@/data/mockAgents";
 import { formatEUR } from "@/lib/format";
 import { ArrowLeft, Heart, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -67,8 +66,8 @@ export default function PropertyDetailsPage() {
   }
 
   const agent =
-    MOCK_AGENTS.find((a) => a.municipalities.includes(property.municipality)) ??
-    MOCK_AGENTS[0];
+    state.agents.find((a) => a.municipalities.includes(property.municipality)) ??
+    state.agents[0];
 
   const waMsg = `Olá! Tenho interesse no imóvel “${property.title}” (${formatEUR(property.priceEur)}). Podemos agendar uma visita?`;
 
@@ -171,12 +170,15 @@ export default function PropertyDetailsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Resposta rápida via WhatsApp ou formulário (gera lead no CRM).
               </p>
-              <div className="mt-3 text-xs text-muted-foreground">
-                Consultor sugerido: <span className="font-medium text-foreground">{agent.name}</span>
-              </div>
+              {agent && (
+                <div className="mt-3 text-xs text-muted-foreground">
+                  Consultor sugerido:{" "}
+                  <span className="font-medium text-foreground">{agent.name}</span>
+                </div>
+              )}
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <WhatsAppCTAButton
-                  agentPhone={agent.whatsappPhone}
+                  agentPhone={agent?.whatsappPhone ?? "+351210000000"}
                   message={waMsg}
                   className="rounded-2xl"
                 />
