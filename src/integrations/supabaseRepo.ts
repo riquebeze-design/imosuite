@@ -64,6 +64,31 @@ export async function loadAgentsFromSupabase(): Promise<Agent[] | null> {
   return data.map(mapAgentFromRow);
 }
 
+export async function createAgentInSupabase(input: {
+  name: string;
+  role: Agent["role"];
+  email: string;
+  whatsappPhone: string;
+  municipalities: string[];
+}): Promise<Agent> {
+  const sb = assertSupabase();
+
+  const { data, error } = await sb
+    .from("agents")
+    .insert({
+      name: input.name,
+      role: input.role,
+      email: input.email,
+      whatsapp_phone: input.whatsappPhone,
+      municipalities: input.municipalities,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return mapAgentFromRow(data);
+}
+
 export async function loadPropertiesFromSupabase(): Promise<Property[] | null> {
   const sb = assertSupabase();
   const { data, error } = await sb

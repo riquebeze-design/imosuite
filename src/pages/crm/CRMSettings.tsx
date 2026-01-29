@@ -10,10 +10,11 @@ import { seedMockDataToSupabase } from "@/integrations/supabaseRepo";
 import { useToast } from "@/hooks/use-toast";
 import { DatabaseZap } from "lucide-react";
 import { HeroMediaManager } from "@/components/crm/HeroMediaManager";
+import { AgentCreateModal } from "@/components/crm/AgentCreateModal";
 
 export default function CRMSettingsPage() {
   useSeo({ title: "Definições — CRM AtlasCasa" });
-  const { currentAgent, backendInfo } = useAppStore();
+  const { currentAgent, backendInfo, state } = useAppStore();
   const { toast } = useToast();
   if (!currentAgent) return <CRMLogin />;
 
@@ -41,6 +42,40 @@ export default function CRMSettingsPage() {
     <CRMShell title="Definições">
       <div className="grid gap-4">
         <HeroMediaManager />
+
+        <Card className="rounded-[2rem] border bg-card p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="text-sm font-semibold tracking-tight">Agentes</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Gestão de consultores/gestores/admins. Na versão final, isto é controlado
+                por Supabase Auth + roles.
+              </p>
+            </div>
+            <AgentCreateModal />
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {state.agents.map((a) => (
+              <div
+                key={a.id}
+                className="rounded-3xl border bg-background p-4 flex items-start justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <div className="font-semibold tracking-tight truncate">{a.name}</div>
+                  <div className="text-sm text-muted-foreground truncate">{a.email}</div>
+                  <div className="mt-2 text-xs text-muted-foreground truncate">
+                    {a.municipalities.slice(0, 4).join(", ")}
+                    {a.municipalities.length > 4 ? "…" : ""}
+                  </div>
+                </div>
+                <Badge className="rounded-full bg-secondary text-muted-foreground">
+                  {a.role}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         <Card className="rounded-[2rem] border bg-card p-4">
           <div className="text-sm font-semibold tracking-tight">Backend</div>
