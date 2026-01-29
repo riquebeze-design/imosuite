@@ -100,6 +100,13 @@ export default function CRMSettingsPage() {
             </Badge>
           </div>
 
+          {backendInfo.lastError && (
+            <div className="mt-3 rounded-2xl border bg-background p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+              <div className="font-semibold text-foreground mb-1">Último erro</div>
+              {backendInfo.lastError}
+            </div>
+          )}
+
           <div className="mt-4 flex flex-wrap gap-2">
             <Button className="rounded-2xl" onClick={seed}>
               <DatabaseZap className="h-4 w-4" />

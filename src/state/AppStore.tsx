@@ -578,11 +578,38 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const dispatch = useCallback(async (action: Action) => {
+    const isUuid = (v: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        v,
+      );
+
+    async function resolvePropertyIdBySlug(slug: string) {
+      if (!supabase) return null;
+      const { data, error } = await supabase
+        .from("properties")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (error) return null;
+      return data?.id ? String(data.id) : null;
+    }
+
+    async function resolveAgentIdByEmail(email: string) {
+      if (!supabase) return null;
+      const { data, error } = await supabase
+        .from("agents")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      if (error) return null;
+      return data?.id ? String(data.id) : null;
+    }
+
     // Intercepta criação de lead para garantir sync + automações consistentes
     if (action.type === "lead_create_request") {
       const leadId = uuid();
       const createdAt = new Date().toISOString();
-      const { lead, runs } = buildLeadAndAutomations(
+      let { lead, runs } = buildLeadAndAutomations(
         stateRef.current,
         action.lead,
         leadId,
@@ -592,7 +619,31 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       // tenta escrever no Supabase (sem bloquear a UI em caso de falha)
       if (supabase) {
         try {
-          await createLeadInSupabase(lead);
+          // Resolver FKs (property_id / assigned_agent_id) quando o UI estiver com IDs mock
+          let propertyIdForDb = lead.propertyId;
+          if (propertyIdForDb && !isUuid(propertyIdForDb)) {
+            const p = stateRef.current.catalog.find((x) => x.id === propertyIdForDb);
+            const resolved = p?.slug ? await resolvePropertyIdBySlug(p.slug) : null;
+            propertyIdForDb = resolved ?? undefined;
+          }
+
+          let agentIdForDb = lead.assignedAgentId;
+          if (agentIdForDb && !isUuid(agentIdForDb)) {
+            const a = stateRef.current.agents.find((x) => x.id === agentIdForDb);
+            const resolved = a?.email ? await resolveAgentIdByEmail(a.email) : null;
+            agentIdForDb = resolved ?? undefined;
+          }
+
+          const leadToWrite: Lead = {
+            ...lead,
+            propertyId: propertyIdForDb,
+            assignedAgentId: agentIdForDb,
+          };
+
+          // Para manter UI/CRM consistente quando já estamos em modo Supabase
+          lead = leadToWrite;
+
+          await createLeadInSupabase(leadToWrite);
           for (const r of runs) {
             await insertAutomationRunToSupabase({
               id: r.id,
@@ -602,8 +653,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               at: r.at,
             });
           }
-        } catch {
-          // fallback silencioso: mantém local
+
+          baseDispatch({
+            type: "hydrate",
+            state: { backend: { lastError: undefined, status: "ready" } },
+          });
+        } catch (e) {
+          baseDispatch({
+            type: "hydrate",
+            state: {
+              backend: {
+                lastError: e instanceof Error ? e.message : String(e),
+                status: "ready",
+              },
+            },
+          });
         }
       }
 
@@ -656,8 +720,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       if (action.type === "email_campaign_update") {
         await upsertEmailCampaignToSupabase(action.campaign);
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      baseDispatch({
+        type: "hydrate",
+        state: {
+          backend: {
+            lastError: e instanceof Error ? e.message : String(e),
+          },
+        },
+      });
     }
   }, []);
 
