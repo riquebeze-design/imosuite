@@ -25,6 +25,7 @@ import {
 import { hexToHslVars, hslVarsToCss } from "@/lib/color";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabaseClient";
 import { Paintbrush, Upload } from "lucide-react";
+import { upsertSiteSettingsToSupabase } from "@/integrations/siteSettingsRepo";
 
 const BUCKET = "site-media";
 
@@ -72,6 +73,7 @@ export function BrandIdentityModal() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<BrandSettings>(() => getBrandSettings());
+  const [saving, setSaving] = useState(false);
 
   // re-sync draft every time it opens
   useEffect(() => {
@@ -81,11 +83,32 @@ export function BrandIdentityModal() {
 
   const canUpload = useMemo(() => isSupabaseConfigured(), []);
 
-  function save() {
-    setBrandSettings(draft);
-    applyBrandToDocument(draft);
-    toast({ title: "Identidade visual actualizada" });
-    setOpen(false);
+  async function save() {
+    setSaving(true);
+    try {
+      // 1) persist local
+      setBrandSettings(draft);
+      applyBrandToDocument(draft);
+
+      // 2) persist Supabase
+      if (isSupabaseConfigured()) {
+        await upsertSiteSettingsToSupabase({ brand: draft });
+      }
+
+      toast({ title: "Identidade visual actualizada" });
+      setOpen(false);
+    } catch (e) {
+      toast({
+        title: "Falha ao guardar",
+        description:
+          e instanceof Error
+            ? e.message
+            : "Verifique tabela site_settings e policies (RLS).",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   function setHex(field: keyof BrandSettings["theme"], hex: string) {
@@ -583,11 +606,12 @@ export function BrandIdentityModal() {
             variant="secondary"
             className="rounded-2xl"
             onClick={() => setOpen(false)}
+            disabled={saving}
           >
             Cancelar
           </Button>
-          <Button className="rounded-2xl" onClick={save}>
-            Guardar alterações
+          <Button className="rounded-2xl" onClick={save} disabled={saving}>
+            {saving ? "A guardar…" : "Guardar alterações"}
           </Button>
         </div>
       </DialogContent>

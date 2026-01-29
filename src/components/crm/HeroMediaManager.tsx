@@ -19,6 +19,7 @@ import {
   type HeroSettings,
 } from "@/lib/siteSettings";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabaseClient";
+import { upsertSiteSettingsToSupabase } from "@/integrations/siteSettingsRepo";
 import { ImagePlus, Trash2, Upload, Video } from "lucide-react";
 
 const BUCKET = "site-media";
@@ -56,8 +57,21 @@ export function HeroMediaManager() {
     return "Sem Supabase: pode colar URLs de imagens/vídeo. (Uploads directos requerem Storage.)";
   }, [canUpload]);
 
-  function save() {
+  async function save() {
     setHeroSettings(draft);
+
+    if (isSupabaseConfigured()) {
+      try {
+        await upsertSiteSettingsToSupabase({ hero: draft });
+      } catch (e) {
+        toast({
+          title: "Guardado localmente, mas falhou no Supabase",
+          description: e instanceof Error ? e.message : String(e),
+          variant: "destructive",
+        });
+      }
+    }
+
     toast({ title: "Hero actualizado", description: "Alterações aplicadas ao site." });
   }
 
@@ -311,8 +325,8 @@ export function HeroMediaManager() {
           </div>
 
           <div className="mt-4 rounded-2xl border bg-background/60 p-3 text-xs text-muted-foreground">
-            Dica: crie o bucket <span className="font-medium">{BUCKET}</span> como público para
-            o site conseguir carregar os media.
+            Dica: o bucket <span className="font-medium">{BUCKET}</span> deve ser público para o
+            site conseguir carregar os media.
           </div>
         </div>
       </div>
