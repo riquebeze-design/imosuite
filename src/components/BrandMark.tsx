@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getBrandSettings, subscribeBrandSettings } from "@/lib/brandSettings";
 
 export function BrandMark() {
@@ -9,10 +9,19 @@ export function BrandMark() {
   }, []);
 
   const logoUrl = brand.company.logoUrl;
+  const size = Math.max(24, Math.min(80, brand.company.logoSizePx || 36));
+
+  const wrapperStyle = useMemo<React.CSSProperties>(
+    () => ({ width: size, height: size }),
+    [size],
+  );
 
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <div className="h-9 w-9 rounded-2xl bg-primary/10 ring-1 ring-primary/15 grid place-items-center overflow-hidden shrink-0">
+      <div
+        className="rounded-2xl bg-primary/10 ring-1 ring-primary/15 grid place-items-center overflow-hidden shrink-0"
+        style={wrapperStyle}
+      >
         {logoUrl ? (
           <img
             src={logoUrl}

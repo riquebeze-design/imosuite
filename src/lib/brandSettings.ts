@@ -19,6 +19,8 @@ export type CompanyProfile = {
   phone: string;
   address: string;
   logoUrl?: string;
+  /** Tamanho (largura/altura) da "área" do logotipo, em px */
+  logoSizePx: number;
 };
 
 export type BrandSettings = {
@@ -39,7 +41,8 @@ export function getBrandSettings(): BrandSettings {
       accentForeground: "171 55% 18%",
       border: "214 20% 90%",
       radiusRem: 0.9,
-      fontSans: '"Red Hat Virtual", "Red Hat Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial',
+      fontSans:
+        '"Red Hat Virtual", "Red Hat Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial',
     },
     company: {
       name: "AtlasCasa",
@@ -48,6 +51,7 @@ export function getBrandSettings(): BrandSettings {
       phone: "+351 21 000 0000",
       address: "Lisboa, Portugal",
       logoUrl: undefined,
+      logoSizePx: 36,
     },
   });
 }
