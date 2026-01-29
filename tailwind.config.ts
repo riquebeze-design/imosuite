@@ -18,6 +18,22 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: [
+          '"Red Hat Virtual"',
+          '"Red Hat Display"',
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          '"Segoe UI"',
+          "Roboto",
+          '"Helvetica Neue"',
+          "Arial",
+          '"Noto Sans"',
+          '"Apple Color Emoji"',
+          '"Segoe UI Emoji"',
+        ],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
