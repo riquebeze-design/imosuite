@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { BrandMark } from "@/components/BrandMark";
-import { MOCK_AGENTS } from "@/data/mockAgents";
 import { useAppStore } from "@/state/AppStore";
 import type { AgentRole } from "@/types/realestate";
 
@@ -21,12 +20,12 @@ const ROLE_LABEL: Record<AgentRole, string> = {
 };
 
 export function CRMLogin() {
-  const { dispatch } = useAppStore();
-  const [agentId, setAgentId] = useState(MOCK_AGENTS[0]?.id ?? "");
+  const { dispatch, state } = useAppStore();
+  const [agentId, setAgentId] = useState(state.agents[0]?.id ?? "");
 
   const agent = useMemo(
-    () => MOCK_AGENTS.find((a) => a.id === agentId),
-    [agentId],
+    () => state.agents.find((a) => a.id === agentId),
+    [agentId, state.agents],
   );
 
   return (
@@ -41,7 +40,7 @@ export function CRMLogin() {
 
         <h1 className="mt-6 text-2xl font-semibold tracking-tight">Entrar no CRM</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Nesta demo, a autenticação é simulada. No Supabase Auth, o login passa a ser
+          Nesta demo, a autenticação é simulada. Com Supabase Auth, o login passa a ser
           real com perfis (admin/gestor/consultor).
         </p>
 
@@ -53,7 +52,7 @@ export function CRMLogin() {
                 <SelectValue placeholder="Utilizador" />
               </SelectTrigger>
               <SelectContent>
-                {MOCK_AGENTS.map((a) => (
+                {state.agents.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     {a.name} — {ROLE_LABEL[a.role]}
                   </SelectItem>
@@ -75,6 +74,7 @@ export function CRMLogin() {
           <Button
             className="mt-2 h-11 rounded-2xl"
             onClick={() => dispatch({ type: "session_login", agentId })}
+            disabled={!agentId}
           >
             Entrar
           </Button>

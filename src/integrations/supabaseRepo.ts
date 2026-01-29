@@ -1,4 +1,5 @@
 import type {
+  Agent,
   AutomationRule,
   EmailCampaign,
   Lead,
@@ -12,6 +13,17 @@ import { MOCK_PROPERTIES } from "@/data/mockProperties";
 function assertSupabase() {
   if (!supabase) throw new Error("Supabase não configurado");
   return supabase;
+}
+
+function mapAgentFromRow(r: any): Agent {
+  return {
+    id: String(r.id),
+    name: r.name,
+    role: r.role,
+    municipalities: Array.isArray(r.municipalities) ? r.municipalities : [],
+    whatsappPhone: r.whatsapp_phone,
+    email: r.email,
+  };
 }
 
 function mapPropertyFromRow(r: any): Property {
@@ -38,6 +50,18 @@ function mapPropertyFromRow(r: any): Property {
     createdAt: r.created_at ?? new Date().toISOString(),
     featured: Boolean(r.featured),
   };
+}
+
+export async function loadAgentsFromSupabase(): Promise<Agent[] | null> {
+  const sb = assertSupabase();
+  const { data, error } = await sb
+    .from("agents")
+    .select("*")
+    .order("created_at", { ascending: true })
+    .limit(100);
+  if (error) return null;
+  if (!data?.length) return [];
+  return data.map(mapAgentFromRow);
 }
 
 export async function loadPropertiesFromSupabase(): Promise<Property[] | null> {
@@ -94,7 +118,8 @@ export async function loadLeadsFromSupabase(): Promise<Lead[] | null> {
       preferredDistrict: l.preferred_district ?? undefined,
       preferredMunicipality: l.preferred_municipality ?? undefined,
       preferredTypology: l.preferred_typology ?? undefined,
-      maxBudgetEur: typeof l.max_budget_eur === "number" ? l.max_budget_eur : undefined,
+      maxBudgetEur:
+        typeof l.max_budget_eur === "number" ? l.max_budget_eur : undefined,
       stage: l.stage,
       temperature: l.temperature,
       assignedAgentId: l.assigned_agent_id ? String(l.assigned_agent_id) : undefined,

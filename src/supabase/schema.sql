@@ -113,5 +113,6 @@ create table if not exists ai_conversations (
   created_at timestamptz not null default now()
 );
 
--- RLS (sugestão): como é single-tenant, pode restringir por auth + role.
--- Ative RLS e crie policies conforme o seu fluxo de login.
+-- NOTA SOBRE RLS/POLICIES:
+-- Por omissão, o Supabase pode bloquear operações via anon key se activar RLS.
+-- Para DEMO rápida, use também: src/supabase/policies_demo.sql

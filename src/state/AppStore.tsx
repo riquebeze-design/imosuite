@@ -27,6 +27,7 @@ import {
   createLeadInSupabase,
   insertAutomationRunToSupabase,
   insertLeadActivityInSupabase,
+  loadAgentsFromSupabase,
   loadAutomationsFromSupabase,
   loadEmailCampaignsFromSupabase,
   loadLeadsFromSupabase,
@@ -100,13 +101,17 @@ function leadTemperatureFromLead(lead: Lead, property?: Property): LeadTemperatu
 function pickAgentForLead(
   lead: { preferredMunicipality?: string; propertyId?: string },
   catalog: Property[],
+  agents: Agent[],
 ) {
   const property = lead.propertyId
     ? catalog.find((p) => p.id === lead.propertyId)
     : undefined;
   const municipality = lead.preferredMunicipality ?? property?.municipality;
 
-  const candidates = MOCK_AGENTS.filter((a) => a.role !== "admin");
+  const candidates = agents.length
+    ? agents.filter((a) => a.role !== "admin")
+    : MOCK_AGENTS.filter((a) => a.role !== "admin");
+
   const byMunicipality = municipality
     ? candidates.filter((a) => a.municipalities.includes(municipality))
     : [];
@@ -129,6 +134,7 @@ type BackendStatus = "idle" | "syncing" | "ready" | "error";
 
 export type AppState = {
   catalog: Property[];
+  agents: Agent[];
   favorites: string[];
   compare: string[];
   events: PropertyEvent[];
@@ -221,6 +227,7 @@ const DEFAULT_CAMPAIGNS: EmailCampaign[] = [
 function initialState(): AppState {
   return {
     catalog: MOCK_PROPERTIES,
+    agents: MOCK_AGENTS,
     favorites: storage.get<string[]>(LS_KEYS.favorites, []),
     compare: storage.get<string[]>(LS_KEYS.compare, []),
     events: storage.get<PropertyEvent[]>(LS_KEYS.events, []),
@@ -264,7 +271,7 @@ function buildLeadAndAutomations(
     : undefined;
 
   const assignedAgentId =
-    input.assignedAgentId ?? pickAgentForLead(input, state.catalog);
+    input.assignedAgentId ?? pickAgentForLead(input, state.catalog, state.agents);
 
   const baseLead: Lead = {
     id: leadId,
@@ -286,7 +293,7 @@ function buildLeadAndAutomations(
     ...input,
   };
 
-  const agent = MOCK_AGENTS.find((a) => a.id === assignedAgentId);
+  const agent = state.agents.find((a) => a.id === assignedAgentId);
   const vars = {
     nome: baseLead.name,
     agente: agent?.name ?? "Equipa AtlasCasa",
@@ -501,7 +508,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
-      const [props, leads, autos, camps] = await Promise.all([
+      const [agents, props, leads, autos, camps] = await Promise.all([
+        loadAgentsFromSupabase().catch(() => null),
         loadPropertiesFromSupabase().catch(() => null),
         loadLeadsFromSupabase().catch(() => null),
         loadAutomationsFromSupabase().catch(() => null),
@@ -513,6 +521,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       baseDispatch({
         type: "hydrate",
         state: {
+          agents: agents && agents.length ? agents : undefined,
           catalog: props && props.length ? props : undefined,
           leads: leads ?? undefined,
           automationRules: autos && autos.length ? autos : undefined,
@@ -625,14 +634,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const store = useMemo<AppStore>(() => {
     const currentAgent = state.session
-      ? MOCK_AGENTS.find((a) => a.id === state.session?.agentId) ?? null
+      ? state.agents.find((a) => a.id === state.session?.agentId) ?? null
       : null;
 
     return {
       state,
       dispatch: dispatch as any,
       getPropertyById: (id) => state.catalog.find((p) => p.id === id),
-      getAgentById: (id) => MOCK_AGENTS.find((a) => a.id === id),
+      getAgentById: (id) => state.agents.find((a) => a.id === id),
       currentAgent,
       backendInfo: backend,
     };
