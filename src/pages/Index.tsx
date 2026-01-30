@@ -24,6 +24,8 @@ export default function Index() {
     <SiteShell>
       <HeroSearch />
 
+      <div className="h-10 md:h-14" />
+
       <section className="mx-auto max-w-6xl px-4 pb-10">
         <div className="flex items-end justify-between gap-4">
           <div>
