@@ -61,13 +61,16 @@ export function CRMPipelineBoard() {
         </Button>
       </div>
 
-      {/* Mobile-first: scroll horizontal; em desktop vira grelha */}
-      <div className="-mx-4 px-4 overflow-x-auto">
-        <div className="flex gap-4 min-w-max lg:grid lg:grid-cols-5 lg:min-w-0">
+      {/* Mobile-first: scroll horizontal. Desktop: grelha 5 colunas sem overflow */}
+      <div className="-mx-4 px-4 overflow-x-auto lg:mx-0 lg:px-0 lg:overflow-visible">
+        <div className="flex gap-4 min-w-max lg:min-w-0 lg:grid lg:grid-cols-5 lg:gap-4">
           {STAGES.map((stage) => (
             <div
               key={stage}
-              className="w-[290px] lg:w-auto rounded-[2rem] border bg-card p-3 min-h-[440px]"
+              className={cn(
+                "w-[290px] rounded-[2rem] border bg-card p-3 min-h-[440px]",
+                "lg:w-auto lg:min-w-0 lg:min-h-[560px]",
+              )}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => {
                 if (!dragId) return;
@@ -113,25 +116,28 @@ export function CRMPipelineBoard() {
                           {l.preferredDistrict ?? "Portugal"}
                         </div>
                       </div>
-                      <Badge className={cn("rounded-full", tempBadge(l.temperature))}>
+                      <Badge className={cn("rounded-full shrink-0", tempBadge(l.temperature))}>
                         {l.temperature}
                       </Badge>
                     </div>
 
-                    <div className="mt-2 text-xs text-muted-foreground line-clamp-2" style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}>
+                    <div
+                      className="mt-2 text-xs text-muted-foreground"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
                       {l.message || "(sem mensagem)"}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="text-[11px] text-muted-foreground">
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="text-[11px] text-muted-foreground shrink-0">
                         {new Date(l.createdAt).toLocaleDateString("pt-PT")}
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap justify-end gap-1">
                         {STAGES.filter((s) => s !== stage)
                           .slice(0, 2)
                           .map((s) => (
